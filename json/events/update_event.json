@@ -1,0 +1,10 @@
+{
+    "events": [
+        {
+            "id": 5,
+            "location": "Bucuresti, Romania",
+            "attendees": 100,
+            "notes": "Eveniment de lansare produs nou."
+        }
+    ]
+}

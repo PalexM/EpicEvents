@@ -1,0 +1,10 @@
+{
+    "clients": [
+        {
+            "full_name": "Alexandru Popescu",
+            "email": "pop.alexandru@example.com",
+            "phone": "0123456789",
+            "company_name": "PopSRL"
+        }
+    ]
+}

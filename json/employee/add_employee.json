@@ -1,0 +1,22 @@
+{
+    "employees": [
+        {
+            "name": "John Doe",
+            "email": "john.doe@example.com",
+            "department": "Sales",
+            "password": "admin"
+        },
+        {
+            "name": "Jane Smith",
+            "email": "jane.smith@example.com",
+            "department": "Support",
+            "password": "admin"
+        },
+        {
+            "name": "Alex Johnson",
+            "email": "alex.johnson@example.com",
+            "department": "Management",
+            "password": "admin"
+        }
+    ]
+}

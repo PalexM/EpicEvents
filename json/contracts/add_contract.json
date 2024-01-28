@@ -1,0 +1,10 @@
+{
+    "contracts": [
+        {
+            "client_id": 7,
+            "total_amount": "1000",
+            "amount_due": "500",
+            "status": false
+        }
+    ]
+}
