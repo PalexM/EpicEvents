@@ -4,6 +4,7 @@ from .models import Client
 from contracts.models import Contract
 from employee.scripts import get_connected_employee_email
 import click
+import sentry_sdk
 
 
 class ClientCRUD:
@@ -20,18 +21,24 @@ class ClientCRUD:
                 employee=employee,
             )
             click.secho(f"Client {full_name} was succesfully created", fg="green")
+            sentry_sdk.capture_message(
+                f"Client {full_name} was succesfully created", level="info"
+            )
             return
         except IntegrityError as e:
             click.secho(f"Integrity error :  {e}", fg="red")
+            sentry_sdk.capture_exception(e)
             return
         except Exception as e:
             click.secho(f"Unexpected error : {e}", fg="red")
+            sentry_sdk.capture_exception(e)
             return
 
     @staticmethod
     def get_client(client_id):
         try:
             client = Client.objects.get(id=client_id)
+            sentry_sdk.capture_message("Success getting client", level="info")
             return [
                 [
                     client.id,
@@ -46,13 +53,17 @@ class ClientCRUD:
             ]
         except ObjectDoesNotExist:
             click.secho(f"Client {client_id} doesn't exists", fg="red")
+            sentry_sdk.capture_exception(e)
             return False
 
     def get_client_object(client_id):
         try:
-            return Client.objects.get(id=client_id)
-        except ObjectDoesNotExist:
+            Client.objects.get(id=client_id)
+            sentry_sdk.capture_message("Success", level="info")
+            return
+        except ObjectDoesNotExist as e:
             click.secho(f"Client {client_id} doesn't exists", fg="red")
+            sentry_sdk.capture_exception(e)
             return False
 
     @staticmethod
@@ -73,8 +84,10 @@ class ClientCRUD:
                         client.last_updated,
                     ]
                 )
+            sentry_sdk.capture_message("Success getting all clients", level="info")
             return table
-        except:
+        except Exception as e:
+            sentry_sdk.capture_exception(e)
             click.secho(f"Something went wrong, please try again", fg="red")
             return
 
@@ -82,6 +95,9 @@ class ClientCRUD:
     def update_client(client_id, **kwargs):
         try:
             client = Client.objects.get(id=client_id)
+            sentry_sdk.capture_message(
+                f"Client {client_id} was succesfully updated", level="info"
+            )
             if has_employee_right(client.employee.email):
                 for key, value in kwargs.items():
                     if value not in [None, ""]:
@@ -95,20 +111,24 @@ class ClientCRUD:
                 f"You dont have rights to modify this client, please contact his manager: {client.employee.email}",
                 fg="red",
             )
+
             return
-        except Client.DoesNotExist:
+        except Client.DoesNotExist as e:
             click.secho(f"Client < {client_id} > not found")
+            sentry_sdk.capture_exception(e)
         except Exception as e:
             click.secho(
                 f"Something went wrong wen we tried to update client < {client_id} , error : {e}>",
                 fg="red",
             )
+            sentry_sdk.capture_exception(e)
             return
 
     @staticmethod
     def update_client_contrat(contract_id, employee_id, **kwargs):
         try:
             contract = Contract.objects.get(id=contract_id)
+            sentry_sdk.capture_message("Success", level="info")
             if contract.client.employee_id == employee_id:
                 for key, value in kwargs.items():
                     if value not in [None, ""]:
@@ -116,6 +136,9 @@ class ClientCRUD:
                 contract.save()
                 click.secho(
                     f"Contract {contract_id} was successfully updated", fg="green"
+                )
+                sentry_sdk.capture_message(
+                    f"Contract {contract_id} was successfully updated", level="info"
                 )
                 return
             else:
@@ -125,17 +148,20 @@ class ClientCRUD:
                 )
                 return
 
-        except ObjectDoesNotExist:
+        except ObjectDoesNotExist as e:
             click.secho(f"Contract {contract_id} doesn't exist", fg="red")
+            sentry_sdk.capture_exception(e)
             return
         except Exception as e:
             click.secho(f"Something went wrong: {e}", fg="red")
+            sentry_sdk.capture_exception(e)
             return
 
     @staticmethod
     def delete_client(client_id):
         try:
             client = Client.objects.get(id=client_id)
+            sentry_sdk.capture_message(f"Client {client_id} was deleted", level="info")
             if has_employee_right(client.employee.email):
                 client.delete()
                 click.secho(f"Client {client_id} was deleted", fg="green")
@@ -146,8 +172,9 @@ class ClientCRUD:
                     fg="red",
                 )
             return
-        except ObjectDoesNotExist:
+        except ObjectDoesNotExist as e:
             click.secho(f"Client {client_id} doesn't exists", fg="red")
+            sentry_sdk.capture_exception(e)
             return
 
 

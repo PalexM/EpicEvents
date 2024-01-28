@@ -4,6 +4,7 @@ from .models import Event
 from employee.scripts import get_connected_employee_email
 from employee.models import Employee
 from django.core.exceptions import FieldError
+import sentry_sdk
 
 import click
 
@@ -35,6 +36,9 @@ class EventCRUD:
                     )
 
                     click.secho(f"Event successfully created", fg="green")
+                    sentry_sdk.capture_message(
+                        f"Event successfully created", level="info"
+                    )
                     return
                 else:
                     click.secho(
@@ -43,9 +47,11 @@ class EventCRUD:
                     return
             except IntegrityError as e:
                 click.secho(f"Integrity error: {e}", fg="red")
+                sentry_sdk.capture_exception(e)
                 return
             except Exception as e:
                 click.secho(f"Unexpected error: {e}", fg="red")
+                sentry_sdk.capture_exception(e)
                 return
         else:
             try:
@@ -59,18 +65,22 @@ class EventCRUD:
                 )
 
                 click.secho(f"Event successfully created", fg="green")
+                sentry_sdk.capture_message(f"Event successfully created", level="info")
                 return
             except IntegrityError as e:
                 click.secho(f"Integrity error: {e}", fg="red")
+                sentry_sdk.capture_exception(e)
                 return
             except Exception as e:
                 click.secho(f"Unexpected error: {e}", fg="red")
+                sentry_sdk.capture_exception(e)
                 return
 
     @staticmethod
     def get_event(event_id):
         try:
             event = Event.objects.get(id=event_id)
+            sentry_sdk.capture_message(f"Getting event {event_id} ", level="info")
             return [
                 [
                     event.pk,
@@ -83,8 +93,9 @@ class EventCRUD:
                     event.notes,
                 ]
             ]
-        except ObjectDoesNotExist:
+        except ObjectDoesNotExist as e:
             click.secho(f"Event {event_id} doesn't exist", fg="red")
+            sentry_sdk.capture_exception(e)
             return False
 
     @staticmethod
@@ -106,10 +117,12 @@ class EventCRUD:
                         event.notes,
                     ]
                 )
+            sentry_sdk.capture_message(f"Getting events ", level="info")
             return table
 
         except Exception as e:
             click.secho(f"Something went wrong: {e}", fg="red")
+            sentry_sdk.capture_exception(e)
             return
 
     @staticmethod
@@ -130,12 +143,15 @@ class EventCRUD:
                         event.notes,
                     ]
                 )
+            sentry_sdk.capture_message(f"Filter events ", level="info")
             return table
         except FieldError as e:
             click.secho(f"Filter Error: {e}", fg="red")
+            sentry_sdk.capture_exception(e)
             return
         except Exception as e:
             click.secho(f"Something went wrong: {e}", fg="red")
+            sentry_sdk.capture_exception(e)
             return
 
     @staticmethod
@@ -147,9 +163,13 @@ class EventCRUD:
                     setattr(event, key, value)
             event.save()
             click.secho(f"Event {event_id} was successfully updated", fg="green")
+            sentry_sdk.capture_message(
+                f"Event {event_id} was successfully updated", level="info"
+            )
             return
-        except ObjectDoesNotExist:
+        except ObjectDoesNotExist as e:
             click.secho(f"Event {event_id} doesn't exist", fg="red")
+            sentry_sdk.capture_exception(e)
             return
 
     @staticmethod
@@ -158,9 +178,11 @@ class EventCRUD:
             event = Event.objects.get(id=event_id)
             event.delete()
             click.secho(f"Event {event_id} was deleted", fg="green")
+            sentry_sdk.capture_message(f"Event {event_id} was deleted", level="info")
             return
-        except ObjectDoesNotExist:
+        except ObjectDoesNotExist as e:
             click.secho(f"Event {event_id} doesn't exist", fg="red")
+            sentry_sdk.capture_exception(e)
             return
 
 
