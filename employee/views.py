@@ -4,6 +4,8 @@ import click
 
 
 class EmployeeService:
+    """CRUD OPERATIONS ARE HANDLED HERE"""
+
     @staticmethod
     def authenticate(email, password):
         try:

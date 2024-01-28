@@ -7,7 +7,7 @@ def token_required(f):
     @functools.wraps(f)
     def decorated_function(*args, **kwargs):
         if not check_json_file():
-            click.secho("You need to connect first!", fg="blue", bold=True)
+            click.secho("You need to connect first!", fg="red")
             return
         return f(*args, **kwargs)
 
@@ -22,7 +22,7 @@ def role_required(allowed_role):
 
             if current_role != allowed_role:
                 click.secho(
-                    f"You are not allow to do this action, only {allowed_role} departement can do this",
+                    f"You are not allow to do this action, only {allowed_role} department can do this!",
                     fg="red",
                 )
                 return False

@@ -1,10 +1,14 @@
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import IntegrityError
 from .models import Client
+from contracts.models import Contract
+from employee.scripts import get_connected_employee_email
 import click
 
 
 class ClientCRUD:
+    """CRUD OPERATIONS ARE HANDLED HERE"""
+
     @staticmethod
     def create_client(full_name, email, phone, company_name, employee):
         try:
@@ -65,7 +69,7 @@ class ClientCRUD:
                         client.phone,
                         client.company_name,
                         client.date_created,
-                        client.employee_id,
+                        client.employee,
                         client.last_updated,
                     ]
                 )
@@ -78,31 +82,76 @@ class ClientCRUD:
     def update_client(client_id, **kwargs):
         try:
             client = Client.objects.get(id=client_id)
-            for key, value in kwargs.items():
-                # Verifică dacă valoarea este diferită de un șir gol sau None
-                if value not in [None, ""]:
-                    setattr(client, key, value)
-
-            client.save()  # Deblocată pentru a salva modificările în baza de date
-            click.secho(f"Client < {client_id} > was succesfully updated", fg="green")
+            if has_employee_right(client.employee.email):
+                for key, value in kwargs.items():
+                    if value not in [None, ""]:
+                        setattr(client, key, value)
+                client.save()
+                click.secho(
+                    f"Client < {client_id} > was succesfully updated", fg="green"
+                )
+                return
+            click.secho(
+                f"You dont have rights to modify this client, please contact his manager: {client.employee.email}",
+                fg="red",
+            )
             return
         except Client.DoesNotExist:
             click.secho(f"Client < {client_id} > not found")
         except Exception as e:
-            # Gestionează alte erori posibile
             click.secho(
-                f"Something went wrong wen we tried to update client < {client_id} >",
+                f"Something went wrong wen we tried to update client < {client_id} , error : {e}>",
                 fg="red",
             )
+            return
+
+    @staticmethod
+    def update_client_contrat(contract_id, employee_id, **kwargs):
+        try:
+            contract = Contract.objects.get(id=contract_id)
+            if contract.client.employee_id == employee_id:
+                for key, value in kwargs.items():
+                    if value not in [None, ""]:
+                        setattr(contract, key, value)
+                contract.save()
+                click.secho(
+                    f"Contract {contract_id} was successfully updated", fg="green"
+                )
+                return
+            else:
+                click.secho(
+                    f"Employee {employee_id} is not responsible for the client in Contract {contract_id}",
+                    fg="red",
+                )
+                return
+
+        except ObjectDoesNotExist:
+            click.secho(f"Contract {contract_id} doesn't exist", fg="red")
+            return
+        except Exception as e:
+            click.secho(f"Something went wrong: {e}", fg="red")
             return
 
     @staticmethod
     def delete_client(client_id):
         try:
             client = Client.objects.get(id=client_id)
-            client.delete()
-            click.secho(f"Client {client_id} was deleted", fg="green")
+            if has_employee_right(client.employee.email):
+                client.delete()
+                click.secho(f"Client {client_id} was deleted", fg="green")
+                return
+            else:
+                click.secho(
+                    f"You dont have rights to delete this client, please contact his manager: {client.employee.email}",
+                    fg="red",
+                )
             return
         except ObjectDoesNotExist:
             click.secho(f"Client {client_id} doesn't exists", fg="red")
             return
+
+
+def has_employee_right(client_manager_email):
+    """Check if connected employee is the client manager"""
+    connected_employee_email = get_connected_employee_email()
+    return client_manager_email == connected_employee_email

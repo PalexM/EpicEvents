@@ -1,3 +1,9 @@
+import sentry_sdk
+
+sentry_sdk.init(
+    dsn="https://5ae6383b84ab576e8525154427bd4b11@o4506650319585280.ingest.sentry.io/4506650321485824"
+)
+
 import click
 import django
 import os
@@ -17,7 +23,7 @@ from events.views import Event
 from employee.views import EmployeeService
 from clients.views import ClientCRUD
 from contracts.views import ContractCRUD
-from events.views import EventCRUD
+from events.views import EventCRUD, is_designed_salesman_part_of_support_team
 
 
 class EmployeeCLI:
@@ -40,6 +46,7 @@ class EmployeeCLI:
     @staticmethod
     @click.command()
     @click.argument("json_file", type=click.File("r"))
+    @role_required("Management")
     def register(json_file):
         data = json.load(json_file)  # Folosește json.load pentru a citi din fișier
 
@@ -53,10 +60,12 @@ class EmployeeCLI:
             )
             click.echo(register_employee)
 
+    # LIST ONE EMPLOYEE
     @staticmethod
     @click.command()
     @click.argument("email")
     @token_required
+    @role_required("Management")
     def list_employee(email):
         employee = EmployeeService.get_employee(email)
         if employee:
@@ -69,6 +78,7 @@ class EmployeeCLI:
     @staticmethod
     @click.command()
     @token_required
+    @role_required("Management")
     def list_employees():
         employees = EmployeeService.get_employees()
         print(employees)
@@ -89,6 +99,7 @@ class ClientCLI:
     @click.command()
     @click.argument("json_file", type=click.File("r"))
     @token_required
+    @role_required("Sales")
     def add_client(json_file):
         data = json.load(json_file)
         employee = EmployeeCLI.get_connected_employee()
@@ -125,7 +136,6 @@ class ClientCLI:
     @staticmethod
     @click.command()
     @token_required
-    @role_required("Sales")
     def list_clients():
         clients = ClientCRUD.get_all_clients()
         if clients:
@@ -146,6 +156,7 @@ class ClientCLI:
     @click.command()
     @click.argument("json_file", type=click.File("r"))
     @token_required
+    @role_required("Sales")
     def update_client(json_file):
         data = json.load(json_file)  # Folosește json.load pentru a citi din fișier
         for client in data["clients"]:
@@ -163,11 +174,37 @@ class ClientCLI:
             )
         return
 
+    # UPDATE CLIENT CONTRACT
+    @staticmethod
+    @click.command()
+    @click.argument("json_file", type=click.File("r"))
+    @token_required
+    @role_required("Sales")
+    def update_client_contract(json_file):
+        data = json.load(json_file)  # Folosește json.load pentru a citi din fișier
+        employee = EmployeeCLI.get_connected_employee()
+        for contract in data["contracts"]:
+            id = contract["id"]
+            total_amount = (
+                contract["total_amount"] if "total_amount" in contract else ""
+            )
+            amount_due = contract["amount_due"] if "amount_due" in contract else ""
+            status = contract["status"] if "status" in contract else ""
+            ClientCRUD.update_client_contrat(
+                contract_id=id,
+                employee_id=employee.pk,
+                total_amount=total_amount,
+                amount_due=amount_due,
+                status=status,
+            )
+            return
+
     # DELETE CLIENT
     @staticmethod
     @click.command()
     @click.argument("client_id")
     @token_required
+    @role_required("Sales")
     def delete_client(client_id):
         client = ClientCRUD.delete_client(client_id)
         return
@@ -179,16 +216,17 @@ class ContractCLI:
     @click.command()
     @click.argument("json_file", type=click.File("r"))
     @token_required
+    @role_required("Management")
     def add_contract(json_file):
         data = json.load(json_file)
-        employee = EmployeeCLI.get_connected_employee()
         for contract in data["contracts"]:
             client_id = contract["client_id"]
+            employee_id = contract["employee_id"]
             total_amount = contract["total_amount"]
             amount_due = contract["amount_due"]
             status = contract["status"]
             ContractCRUD.create_contract(
-                client_id, employee.pk, total_amount, amount_due, status
+                client_id, employee_id, total_amount, amount_due, status
             )
         return
 
@@ -230,11 +268,33 @@ class ContractCLI:
             ]
             click.echo(tabulate(contracts, headers, tablefmt="grid"))
 
+    # FILTER CONTRACTS BY SALES
+    @staticmethod
+    @click.command()
+    @click.argument("json_file", type=click.File("r"))
+    @token_required
+    @role_required("Management")
+    def filter_contracts(json_file):
+        data = json.load(json_file)
+        contracts = ContractCRUD.filter_contracts(data)
+        if contracts:
+            headers = [
+                "Id",
+                "Total Amount",
+                "Amount Due",
+                "Creation Date",
+                "Status",
+                "Client",
+                "Employee",
+            ]
+            click.echo(tabulate(contracts, headers, tablefmt="grid"))
+
     # UPDATE CONTRACT
     @staticmethod
     @click.command()
     @click.argument("json_file", type=click.File("r"))
     @token_required
+    @role_required("Management")
     def update_contract(json_file):
         data = json.load(json_file)
         for contract in data["contracts"]:
@@ -267,6 +327,7 @@ class ContractCLI:
     @click.command()
     @click.argument("contract_id")
     @token_required
+    @role_required("Management")
     def delete_contract(contract_id):
         contract = ContractCRUD.delete_contract(contract_id)
         return
@@ -278,11 +339,12 @@ class EventCLI:
     @click.command()
     @click.argument("json_file", type=click.File("r"))
     @token_required
+    @role_required("Sales")
     def add_event(json_file):
         data = json.load(json_file)
-        employee = EmployeeCLI.get_connected_employee()
         for event in data["events"]:
             contract_id = event["contract_id"]
+            employee_id = event["employee_id"] if "employee_id" in event else ""
             event_start_date = event["event_start_date"]
             event_end_date = event["event_end_date"]
             location = event["location"]
@@ -292,7 +354,7 @@ class EventCLI:
                 contract_id,
                 event_start_date,
                 event_end_date,
-                employee.pk,
+                employee_id,
                 location,
                 attendees,
                 notes,
@@ -339,15 +401,60 @@ class EventCLI:
             ]
             click.echo(tabulate(events, headers, tablefmt="grid"))
 
-    # UPDATE EVENT
+    # LIST FILTERED EVENTS FOR MANAGEMENT
     @staticmethod
     @click.command()
     @click.argument("json_file", type=click.File("r"))
     @token_required
-    def update_event(json_file):
+    @role_required("Management")
+    def filter_events(json_file):
+        data = json.load(json_file)
+        events = EventCRUD.filter_events(data)
+        if events:
+            headers = [
+                "Id",
+                "Contract",
+                "Event Start Date",
+                "Event End Date",
+                "Employee",
+                "Location",
+                "Attendees",
+                "Notes",
+            ]
+            click.echo(tabulate(events, headers, tablefmt="grid"))
+
+    # LIST FILTERED EVENTS FOR SUPPORT
+    @staticmethod
+    @click.command()
+    @click.argument("json_file", type=click.File("r"))
+    @token_required
+    @role_required("Support")
+    def filter_events_support(json_file):
+        data = json.load(json_file)
+        events = EventCRUD.filter_events(data)
+        if events:
+            headers = [
+                "Id",
+                "Contract",
+                "Event Start Date",
+                "Event End Date",
+                "Employee",
+                "Location",
+                "Attendees",
+                "Notes",
+            ]
+            click.echo(tabulate(events, headers, tablefmt="grid"))
+
+    # UPDATE EVENT BY MANAGEMENT TEAM
+    @staticmethod
+    @click.command()
+    @click.argument("json_file", type=click.File("r"))
+    @token_required
+    @role_required("Management")
+    def management_team_update_event(json_file):
         data = json.load(json_file)
         for event in data["events"]:
-            id = event["id"] if "id" in event else ""
+            id = event["id"]
             contract_id = event["contract_id"] if "contract_id" in event else ""
             event_start_date = (
                 event["event_start_date"] if "event_start_date" in event else ""
@@ -355,29 +462,81 @@ class EventCLI:
             event_end_date = (
                 event["event_end_date"] if "event_end_date" in event else ""
             )
-            employee = event["employee"] if "employee" in event else ""
+            employee = (
+                event["employee_id"]
+                if "employee_id" in event
+                else ContractCRUD.get_contract(id)[0][6]
+            )
+            if employee is object:
+                employee_id = employee.pk
+            else:
+                employee_id = employee
+                employee = EmployeeService.get_employee_object_by_id(employee_id)
             location = event["location"] if "location" in event else ""
             attendees = event["attendees"] if "attendees" in event else ""
             notes = event["notes"] if "notes" in event else ""
 
-            if employee != "":
-                employee = EmployeeService.get_employee_object_by_id(event["employee"])
-            EventCRUD.update_event(
-                event_id=id,
-                contract_id=contract_id,
-                event_start_date=event_start_date,
-                event_end_date=event_end_date,
-                employee=employee,
-                location=location,
-                attendees=attendees,
-                notes=notes,
+            if is_designed_salesman_part_of_support_team(employee_id):
+                EventCRUD.update_event(
+                    event_id=id,
+                    contract_id=contract_id,
+                    event_start_date=event_start_date,
+                    event_end_date=event_end_date,
+                    employee=employee,
+                    location=location,
+                    attendees=attendees,
+                    notes=notes,
+                )
+            else:
+                click.secho(
+                    f"The designated employee is not part of Suport team", fg="red"
+                )
+                return
+
+    # UPDATE EVENT BY SUPPORT TEAM
+    @staticmethod
+    @click.command()
+    @click.argument("json_file", type=click.File("r"))
+    @token_required
+    @role_required("Support")
+    def support_team_update_event(json_file):
+        data = json.load(json_file)
+        employee = EmployeeCLI.get_connected_employee()
+        for event in data["events"]:
+            id = event["id"]
+            contract_id = event["contract_id"] if "contract_id" in event else ""
+            event_start_date = (
+                event["event_start_date"] if "event_start_date" in event else ""
             )
+            event_end_date = (
+                event["event_end_date"] if "event_end_date" in event else ""
+            )
+            location = event["location"] if "location" in event else ""
+            attendees = event["attendees"] if "attendees" in event else ""
+            notes = event["notes"] if "notes" in event else ""
+            if EventCRUD.get_event(id)[0][4].pk == employee.pk:
+                EventCRUD.update_event(
+                    event_id=id,
+                    contract_id=contract_id,
+                    event_start_date=event_start_date,
+                    event_end_date=event_end_date,
+                    employee=employee,
+                    location=location,
+                    attendees=attendees,
+                    notes=notes,
+                )
+            else:
+                click.secho(
+                    f"You are not the assigned to this event, the person assigned is {EventCRUD.get_event(id)[0][4]}",
+                    fg="red",
+                )
 
     # DELETE EVENT
     @staticmethod
     @click.command()
     @click.argument("event_id")
     @token_required
+    @role_required("Sales")
     def delete_event(event_id):
         event = EventCRUD.delete_event(event_id)
         return
@@ -397,6 +556,7 @@ cli.add_command(EmployeeCLI.list_employee, "list-employee")
 # CLIENT
 cli.add_command(ClientCLI.add_client, "add-client")
 cli.add_command(ClientCLI.update_client, "update-client")
+cli.add_command(ClientCLI.update_client_contract, "update-client-contract")
 cli.add_command(ClientCLI.list_client, "list-client")
 cli.add_command(ClientCLI.list_clients, "list-clients")
 cli.add_command(ClientCLI.delete_client, "delete-client")
@@ -406,14 +566,18 @@ cli.add_command(ContractCLI.add_contract, "add-contract")
 cli.add_command(ContractCLI.update_contract, "update-contract")
 cli.add_command(ContractCLI.list_contract, "list-contract")
 cli.add_command(ContractCLI.list_contracts, "list-contracts")
+cli.add_command(ContractCLI.filter_contracts, "filter-contracts")
 cli.add_command(ContractCLI.delete_contract, "delete-contract")
 
 
 # EVENTS
 cli.add_command(EventCLI.add_event, "add-event")
-cli.add_command(EventCLI.update_event, "update-event")
+cli.add_command(EventCLI.management_team_update_event, "management-team_update-event")
+cli.add_command(EventCLI.support_team_update_event, "support-team-update-event")
 cli.add_command(EventCLI.list_event, "list-event")
 cli.add_command(EventCLI.list_events, "list-events")
+cli.add_command(EventCLI.filter_events, "filter-events")
+cli.add_command(EventCLI.filter_events_support, "filter-events-support")
 cli.add_command(EventCLI.delete_event, "delete-event")
 
 if __name__ == "__main__":

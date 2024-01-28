@@ -1,11 +1,8 @@
 {
     "clients": [
         {
-            "id": 7,
-            "full_name": "Alexandru Pop",
-            "email": "pop.alexandru@example.com",
-            "phone": "0123456789",
-            "company_name": "Popescu SARL"
+            "id": 8,
+            "employee_id": 7
         }
     ]
 }

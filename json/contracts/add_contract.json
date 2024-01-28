@@ -2,8 +2,9 @@
     "contracts": [
         {
             "client_id": 7,
-            "total_amount": "1000",
-            "amount_due": "500",
+            "employee_id": 7,
+            "total_amount": "1",
+            "amount_due": "5",
             "status": false
         }
     ]

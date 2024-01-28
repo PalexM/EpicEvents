@@ -57,6 +57,16 @@ def get_secret():
         return secret
 
 
+def get_connected_employee_email():
+    try:
+        with open("secrets/employee_token.json", "r") as file:
+            data = json.load(file)
+            email = data["email"]
+            return email
+    except json.JSONDecodeError:
+        return False
+
+
 def get_role():
     try:
         with open("secrets/employee_token.json", "r") as file:
