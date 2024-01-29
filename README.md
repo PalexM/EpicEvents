@@ -42,26 +42,11 @@ pip install -r requirements.txt
 python manage.py migrate
  ```
 
-5. **Lancer le serveur** :
+5. **Lancer le script** :
  ```
-python manage.py runserver
- ```
-
-### Avec Docker
-1. **Télécharger l'image Docker depuis Docker Hub** :
- ```
-docker pull mrp0p/litrevu
- ```
-2. **Exécuter le conteneur Docker** :
- ```
-docker run -p 8000:8000 mrp0p/litrevu
+python crm.py
  ```
 
-## Utilisation
-Après avoir lancé le serveur (soit via l'environnement virtuel, soit via Docker), vous pouvez accéder à l'application en ouvrant votre navigateur et en allant à l'adresse `http://localhost:8000`.
-
-## Contribution
-Les contributions à ce projet sont les bienvenues. N'hésitez pas à proposer des améliorations ou à signaler des problèmes via les issues ou les pull requests sur GitHub.
 
 
 
