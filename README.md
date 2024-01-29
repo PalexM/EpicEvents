@@ -45,7 +45,13 @@ python manage.py migrate
 5. **Lancer le script** :
  ```
 python crm.py
+
  ```
+
+**Schema Base de donnees**
+
+![schema Base de donnees](schema_db.png)
+
 
 
 

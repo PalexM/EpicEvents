@@ -544,6 +544,7 @@ class EventCLI:
 
 @click.group()
 def cli():
+    """Customer Relationship Management"""
     pass
 
 
